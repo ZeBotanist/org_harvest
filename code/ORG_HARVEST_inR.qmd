@@ -1,0 +1,28 @@
+---
+title: "Split-plot RCBD"
+format: html
+---
+
+# Introduction  
+The goals of this exercise are to:  
+- Create an analytical workflow for a **split-plot RCBD** with **random blocks**, from data import through publication-ready plot  
+- Understand each of its components  
+
+# a) Setup  
+Here is where we load the packages we will use.  
+```{r setup}
+# Loading packages
+library(tidyverse) # for data wrangling and plotting
+library(car) # for Anova function
+library(lme4)
+library(broom) # for model residuals extraction
+library(emmeans) # for model mean extraction
+library(multcomp) # for pairwise comparison letter display
+```
+
+
+
+
+
+
+
