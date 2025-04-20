@@ -483,13 +483,137 @@ anova(broc_model, type = 3)
 
 
 
+## SEPERATING RESULTS FROM YEAR-TO-YEAR
+
+```{r}
+
+broc_2022 <- broc_harvest_dfw %>% filter(year == 2022)
+broc_2024 <- broc_harvest_dfw %>% filter(year == 2024)
 
 
+tom_2023 <- tom_harvest_dfw %>% filter(year == 2023)
+tom_2024 <- tom_harvest_dfw %>% filter(year == 2024)
 
+tom_2024
+```
 
+#a) 2022 Brocolli Graph
+```{r}
+ggplot(data = broc_2022, aes(x = trmt, y = total_avg_yield_kg_ha, fill = trmt)) +
+  geom_boxplot(alpha = 0.8) +
+  geom_jitter(shape = 21, size = 3, alpha = 0.6) +
+  facet_grid(. ~ poultry_litter:fertilizer) +
+  labs(
+    title = "Yield by Treatment (2022)",
+    x = "Treatment",
+    y = "Total Avg Yield (kg/ha)"
+  ) +
+  scale_fill_viridis_d() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    legend.position = "none"
+  )
+```
 
+#b) 2024 Brocolli graph
+```{r}
+ggplot(data = broc_2024, aes(x = trmt, y = total_avg_yield_kg_ha, fill = trmt)) +
+  geom_boxplot(alpha = 0.8) +
+  geom_jitter(shape = 21, size = 3, alpha = 0.6) +
+  facet_grid(. ~ poultry_litter:fertilizer) +
+  labs(
+    title = "Yield by Treatment (2024)",
+    x = "Treatment",
+    y = "Total Avg Yield (kg/ha)"
+  ) +
+  scale_fill_viridis_d() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    legend.position = "none"
+  )
+```
 
+#c) 2023 Tomato Grpah
+```{r}
+ggplot(data = tom_2023, aes(x = trmt, y = total_avg_yield_kg_ha, fill = trmt)) +
+  geom_boxplot(alpha = 0.8) +
+  geom_jitter(shape = 21, size = 3, alpha = 0.6) +
+  facet_grid(. ~ poultry_litter:fertilizer) +
+  labs(
+    title = "Yield by Treatment (2024)",
+    x = "Treatment",
+    y = "Total Avg Yield (kg/ha)"
+  ) +
+  scale_fill_viridis_d() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    legend.position = "none"
+  )
+```
 
+#d) 2024 Tomato Grpah
+```{r}
+ggplot(data = tom_2024, aes(x = trmt, y = total_avg_yield_kg_ha, fill = trmt)) +
+  geom_boxplot(alpha = 0.8) +
+  geom_jitter(shape = 21, size = 3, alpha = 0.6) +
+  facet_grid(. ~ poultry_litter:fertilizer) +
+  labs(
+    title = "Yield by Treatment (2024)",
+    x = "Treatment",
+    y = "Total Avg Yield (kg/ha)"
+  ) +
+  scale_fill_viridis_d() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    legend.position = "none"
+  )
+```
+
+##SEPERATING By Individual Harvest
+
+```{r}
+tom_harvestnumber_df <- read_excel("../data/tom_harvest#.xlsx")
+
+tom_harvestnumber_df_cleaned <- clean_names(tom_harvestnumber_df)
+tom_harvestnumber_df_cleaned 
+
+tom_harvestnumber_dfw <- tom_harvestnumber_df_cleaned  %>%
+  mutate(study = factor(study),
+         trmt = factor(trmt),
+         poultry_litter = factor(poultry_litter),
+         fertilizer = factor(fertilizer),
+         crop = factor(crop),
+         year = factor(year),
+         date = factor(date)
+         ) %>%
+  mutate(trtname = paste0(crop,"+",
+                          trmt, "+",
+                          poultry_litter, "+",
+                          fertilizer ))
+```
+
+```{r}
+
+#Plotting cumu marketable harvest avg. (trmt:date and PL:F)
+ggplot(tom_harvestnumber_dfw, aes(x =date, 
+                    y = cumu_mark_avg_yield_kg_ha,
+                    color = trmt)) +
+  geom_boxplot() +
+  geom_jitter() +
+  facet_grid(.~poultry_litter:fertilizer) +
+  theme(legend.position = "right")
+
+#Plotting cumu unmarketable harvest avg (trmt and Harvest date)
+#ggplot(tom_harvestnumber_dfw, aes(x = trmt, 
+                    #y = cumu_mark_avg_yield_kg_ha,
+                    #color = trmt)) +
+ # geom_boxplot() +
+  #geom_jitter() +
+#  facet_grid(.~date) +
+ # theme(legend.position = "none")
+
+tom_harvestnumber_dfw
+```
 
 
 
