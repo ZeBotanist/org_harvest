@@ -1,15 +1,16 @@
 ---
-title: "Split-plot RCBD"
+title: "ORG Harvest Analysis in R"
 format: html
+editor: visual
 ---
 
-# Introduction  
-The goals of this exercise are to:  
-- Create an analytical workflow for a **split-plot RCBD** with **random blocks**, from data import through publication-ready plot  
-- Understand each of its components  
+# Introduction
 
-# a) Setup  
-Here is where we load the packages we will use.  
+
+# a) Setup
+
+Here is where we load the packages we will use.
+
 ```{r setup}
 # Loading packages
 library(tidyverse) # for data wrangling and plotting
@@ -18,7 +19,534 @@ library(lme4)
 library(broom) # for model residuals extraction
 library(emmeans) # for model mean extraction
 library(multcomp) # for pairwise comparison letter display
+library(readxl)
+library(janitor)
+library(lmerTest) # gives p-values for lme4 models 
 ```
+
+
+Data Import
+```{r}
+org_harvest_df <- read_excel("../data/ORG Harvest Data for R.xlsx")
+
+org_harvest_df
+```
+
+```{r}
+org_harvest_df_cleaned <- clean_names(org_harvest_df)
+
+org_harvest_df_cleaned
+```
+
+
+```{r}
+glimpse(org_harvest_df_cleaned)
+```
+
+
+
+# b) Wrangling
+```{r}
+org_harvest_dfw <- org_harvest_df_cleaned %>%
+  mutate(study = factor(study),
+         trmt = factor(trmt),
+         poultry_litter = factor(poultry_litter),
+         fertilizer = factor(fertilizer),
+         crop = factor(crop),
+         date = factor(date)
+         ) %>%
+  mutate(trtnmae = paste0(crop,"+",
+                          trmt, "+",
+                          poultry_litter, "+",
+                          fertilizer ))
+
+org_harvest_dfw
+```
+
+
+```{r}
+ggplot(org_harvest_dfw, aes(x = trmt, 
+                    y = total_avg_yield_kg_ha,
+                    color = trmt)) +
+  geom_boxplot() +
+  geom_jitter() +
+  facet_grid(.~crop) +
+  theme(legend.position = "none")
+```
+```{r}
+ggplot(org_harvest_dfw, aes(x = crop, 
+                    y = cumu_mark_avg_yield_kg_ha,
+                    color = trmt)) +
+  geom_boxplot() +
+  geom_jitter() +
+  facet_grid(.~date) +
+  theme(legend.position = "none")
+```
+
+
+```{r}
+ggplot(org_harvest_dfw, aes(x = date, 
+                    y = total_avg_yield_kg_ha,
+                    color = trmt)) +
+  geom_boxplot() +
+  geom_jitter() +
+  facet_grid(.~study) +
+  theme(legend.position = "none")
+```
+
+
+
+
+
+
+
+
+
+
+
+#START HERE: ORG TOMATOS
+## :: data import and visulaization
+
+```{r}
+tom_harvest_df <- read_excel("../data/tom_finalharvest_avg.xlsx")
+
+tom_harvest_df_cleaned <- clean_names(tom_harvest_df)
+tom_harvest_df_cleaned 
+
+tom_harvest_dfw <- tom_harvest_df_cleaned %>%
+  mutate(study = factor(study),
+         trmt = factor(trmt),
+         poultry_litter = factor(poultry_litter),
+         fertilizer = factor(fertilizer),
+         crop = factor(crop),
+         year = factor(year)
+         ) %>%
+  mutate(trtname = paste0(crop,"+",
+                          trmt, "+",
+                          poultry_litter, "+",
+                          fertilizer ))
+
+#Plotting total harvest avg
+
+ggplot(tom_harvest_dfw, aes(x = trmt, 
+                    y = total_avg_yield_kg_ha,
+                    color = trmt)) +
+  geom_boxplot() +
+  geom_jitter() +
+  facet_grid(.~poultry_litter:fertilizer) +
+  theme(legend.position = "none")
+
+#Plotting total marketable harvest avg
+ggplot(tom_harvest_dfw, aes(x = trmt, 
+                    y = total_mark_avg_yield_kg_ha,
+                    color = trmt)) +
+  geom_boxplot() +
+  geom_jitter() +
+  facet_grid(.~poultry_litter:fertilizer) +
+  theme(legend.position = "none")
+
+#Plotting total unmarketable harvest avg
+ggplot(tom_harvest_dfw, aes(x = trmt, 
+                    y = total_unmark_avg_yield_kg_ha,
+                    color = trmt)) +
+  geom_boxplot() +
+  geom_jitter() +
+  facet_grid(.~poultry_litter:fertilizer) +
+  theme(legend.position = "none")
+
+tom_harvest_dfw
+```
+
+#d) Fit Model
+```{r}
+
+# Fit model
+tom_model <- lmer(total_avg_yield_kg_ha ~ trmt * poultry_litter * fertilizer +
+                            (1 | year/trmt/poultry_litter), 
+                          data = tom_harvest_dfw)
+
+# Show summary
+summary(tom_model)
+
+```
+
+# e) Check Residuals
+```{r}
+# Residuals vs Fitted
+plot(tom_model)
+
+# QQ plot of residuals
+qqnorm(resid(tom_model))
+qqline(resid(tom_model))
+
+# Histogram of residuals
+hist(resid(tom_model), main = "Histogram of Residuals", xlab = "Residuals")
+
+```
+
+#f) Linear Model Assumptions
+```{r}
+library(broom.mixed)
+tom_model_resid <- augment(tom_model) %>%
+  mutate(.studresid=rstudent(tom_model))
+
+tom_model_resid
+```
+
+```{r}
+ggplot(tom_model_resid, aes(x=.fitted, y=.studresid))+
+  geom_hline(yintercept = 0, color="red")+
+  geom_point(shape = 21,
+             fill = "purple", 
+             size = 3,
+             alpha = .7)+
+  geom_smooth()+
+  geom_hline(yintercept = c(-3,3), color = "red")+
+  theme_bw()
+```
+
+```{r}
+ggplot(tom_model_resid, aes(sample=.studresid))+
+  stat_qq(  shape = 21,
+            fill = "purple", 
+            size = 3,
+            alpha = .7
+  )+
+  stat_qq_line()+
+  labs(x = "Theoretical quantile",
+       y = "Sample quantile")+
+  theme_bw()
+```
+
+```{r}
+ggplot(tom_model_resid, aes(x=.studresid))+
+  geom_density(color = "black",
+               fill = "purple",
+               alpha = .7)+
+  scale_x_continuous(breaks = c(-3,0,3), limits = c(-3,3))+
+  theme_bw()
+
+```
+
+#g) Model Means
+```{r}
+tom_means_all <- emmeans(tom_model, 
+                                  ~trmt:poultry_litter:fertilizer)
+
+tom_means_all
+```
+
+#h) Pairwise Comaprison
+```{r}
+tom_means_cld_all <- cld(tom_means_all, 
+                   reversed=T, 
+                   adjust="none",
+               Letters=letters)
+
+tom_means_cld_all
+```
+
+##light wrangling 
+```{r}
+tom_means_cld_all_selected <- tom_means_cld_all %>%
+  as.data.frame() %>%
+  mutate(letter=trimws(.group)) %>%
+  mutate(trtname = paste0(trmt,"+",poultry_litter, "+", fertilizer))
+
+tom_means_cld_all_selected
+```
+# i) Final Plot
+```{r}
+ggplot(mapping = aes(fill = trtname))+
+  # Raw data and boxplots  
+  geom_boxplot(data = tom_harvest_dfw,
+               aes(x = trtname, y = total_avg_yield_kg_ha),
+               alpha = .8) +
+  geom_jitter(data = tom_harvest_dfw,
+               aes(x = trtname, y = total_avg_yield_kg_ha),
+              shape = 21,
+              size = 3,
+              alpha = .6) +
+  # Adding letters
+  geom_label(data = tom_means_cld_all_selected,
+            aes(x = trtname, y = emmean, label = letter),
+            fill = "white") +
+  labs(x = "Trt +Poultry Litter + Fertilizer",
+       y = "Total Cumu Yield (kg/ha)") +
+  scale_fill_viridis_d() +
+  theme(panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        legend.position = "none")
+
+
+
+```
+
+
+
+
+#e) Anova table 
+```{r}
+anova(tom_model, type = 3)
+```
+
+
+
+
+#START HERE: ORG BROCCOLI
+
+```{r}
+broc_harvest_df <- read_excel("../data/broc_finalharvest_avg.xlsx")
+
+broc_harvest_df_cleaned <- clean_names(broc_harvest_df)
+broc_harvest_df_cleaned 
+
+broc_harvest_dfw <- broc_harvest_df_cleaned %>%
+  mutate(study = factor(study),
+         trmt = factor(trmt),
+         poultry_litter = factor(poultry_litter),
+         fertilizer = factor(fertilizer),
+         crop = factor(crop),
+         year = factor(year)
+         ) %>%
+  mutate(trtname = paste0(crop,"+",
+                          trmt, "+",
+                          poultry_litter, "+",
+                          fertilizer ))
+
+#Plotting total harvest avg
+
+ggplot(broc_harvest_dfw, aes(x = trmt, 
+                    y = total_avg_yield_kg_ha,
+                    color = trmt)) +
+  geom_boxplot() +
+  geom_jitter() +
+  facet_grid(.~poultry_litter:fertilizer) +
+  theme(legend.position = "none")
+
+#Plotting total marketable harvest avg
+ggplot(broc_harvest_dfw, aes(x = trmt, 
+                    y = total_mark_avg_yield_kg_ha,
+                    color = trmt)) +
+  geom_boxplot() +
+  geom_jitter() +
+  facet_grid(.~poultry_litter:fertilizer) +
+  theme(legend.position = "none")
+
+#Plotting total unmarketable harvest avg
+ggplot(broc_harvest_dfw, aes(x = trmt, 
+                    y = total_unmark_avg_yield_kg_ha,
+                    color = trmt)) +
+  geom_boxplot() +
+  geom_jitter() +
+  facet_grid(.~poultry_litter:fertilizer) +
+  theme(legend.position = "none")
+
+broc_harvest_dfw
+```
+
+#d) Fit Model
+```{r}
+
+# Fit model
+broc_model <- lmer(total_avg_yield_kg_ha ~ trmt * poultry_litter * fertilizer +
+                            (1 | year/trmt/poultry_litter), 
+                          data = broc_harvest_dfw)
+
+# Show summary
+summary(broc_model)
+
+```
+
+# e) Check Residuals
+```{r}
+# Residuals vs Fitted
+plot(broc_model)
+
+# QQ plot of residuals
+qqnorm(resid(broc_model))
+qqline(resid(broc_model))
+
+# Histogram of residuals
+hist(resid(broc_model), main = "Histogram of Residuals", xlab = "Residuals")
+
+```
+
+#f) Linear Model Assumptions
+```{r}
+library(broom.mixed)
+broc_model_resid <- augment(broc_model) %>%
+  mutate(.studresid=rstudent(broc_model))
+
+broc_model_resid
+```
+
+```{r}
+ggplot(broc_model_resid, aes(x=.fitted, y=.studresid))+
+  geom_hline(yintercept = 0, color="red")+
+  geom_point(shape = 21,
+             fill = "purple", 
+             size = 3,
+             alpha = .7)+
+  geom_smooth()+
+  geom_hline(yintercept = c(-3,3), color = "red")+
+  theme_bw()
+```
+
+```{r}
+ggplot(broc_model_resid, aes(sample=.studresid))+
+  stat_qq(  shape = 21,
+            fill = "purple", 
+            size = 3,
+            alpha = .7
+  )+
+  stat_qq_line()+
+  labs(x = "Theoretical quantile",
+       y = "Sample quantile")+
+  theme_bw()
+```
+
+```{r}
+ggplot(broc_model_resid, aes(x=.studresid))+
+  geom_density(color = "black",
+               fill = "purple",
+               alpha = .7)+
+  scale_x_continuous(breaks = c(-3,0,3), limits = c(-3,3))+
+  theme_bw()
+
+```
+
+#g) Model Means
+```{r}
+broc_means_all <- emmeans(broc_model, 
+                                  ~trmt:poultry_litter:fertilizer)
+
+broc_means_all
+```
+
+#h) Pairwise Comaprison
+```{r}
+broc_means_cld_all <- cld(broc_means_all, 
+                   reversed=T, 
+                   adjust="none",
+               Letters=letters)
+
+broc_means_cld_all
+```
+
+##light wrangling 
+```{r}
+broc_means_cld_all_selected <- broc_means_cld_all %>%
+  as.data.frame() %>%
+  mutate(letter=trimws(.group)) %>%
+  mutate(trtname = paste0(trmt,"+",poultry_litter, "+", fertilizer))
+
+broc_means_cld_all_selected
+```
+# i) Final Plot
+```{r fig.width=12, fig.height=6}
+ggplot(mapping = aes(fill = trmt))+
+  # Raw data and boxplots  
+  geom_boxplot(data = broc_harvest_dfw,
+               aes(x = trmt, y = total_avg_yield_kg_ha),
+               alpha = .8) +
+  geom_jitter(data = broc_harvest_dfw,
+               aes(x = trmt, y = total_avg_yield_kg_ha),
+              shape = 21,
+              size = 3,
+              alpha = .6) +
+    facet_grid(.~poultry_litter:fertilizer) +
+  # Adding letters
+  geom_label(data = broc_means_cld_all_selected,
+            aes(x = trmt, y = emmean, label = letter),
+            fill = "white") +
+  labs( title = "Treatment Effects on Broccoli Yield ",
+    x = "Treatment",
+       y = "Total Average Yield (kg/ha)") +
+  scale_fill_viridis_d() +
+  theme(panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        legend.position = "none",
+            plot.title = element_text(hjust = 0.5)
+        )
+
+
+
+
+```
+
+
+#j) Anova table 
+```{r}
+anova(broc_model, type = 3)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
